@@ -22,5 +22,6 @@ For example
 
 #### Ubuntu
 
-`clang `gnustep-config --objc-flags` -o main main.m `gnustep-config --base-libs` -lm`
+``clang `gnustep-config --objc-flags` -o main main.m `gnustep-config --base-libs` -lm``
 
+## Screenshots
