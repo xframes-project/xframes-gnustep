@@ -1,7 +1,6 @@
 #import <Foundation/Foundation.h>
 #include <dlfcn.h>
 
-// Define the enum
 typedef NS_ENUM(NSInteger, ImGuiCol) {
     ImGuiColText = 0,
     ImGuiColTextDisabled = 1,
@@ -167,9 +166,6 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
     
     [jsonDict setObject:serializedColors forKey:@"colors"];
     
-    // GNUstep might not support NSJSONSerialization
-    // You might need to use a third-party JSON library or implement your own JSON serialization
-    // For this example, let's assume NSJSONSerialization exists:
     NSError *error = nil;
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:jsonDict options:0 error:&error];
     
@@ -179,7 +175,7 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
     }
     
     NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-    return [jsonString autorelease];  // Don't forget to autorelease if not using ARC
+    return [jsonString autorelease];
 }
 
 @end
@@ -205,11 +201,9 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
     if (self) {
         NSMutableArray *fontDefsArray = [NSMutableArray array];
         
-        // Define font and sizes
         NSString *fontName = @"roboto-regular";
         NSArray *sizes = @[@16, @18, @20, @24, @28, @32, @36, @48];
         
-        // Create a dictionary for each font-size combination
         for (NSNumber *size in sizes) {
             NSDictionary *fontDef = @{
                 @"name": fontName,
@@ -218,19 +212,16 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
             [fontDefsArray addObject:fontDef];
         }
         
-        // Assign to the defs property
         self.defs = fontDefsArray;
     }
     return self;
 }
 
 - (NSString *)toJSON {
-    // Create a dictionary to hold the entire structure
     NSDictionary *jsonDict = @{
         @"defs": self.defs
     };
     
-    // Serialize the dictionary to JSON
     NSError *error = nil;
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:jsonDict options:NSJSONWritingPrettyPrinted error:&error];
     
@@ -239,9 +230,8 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
         return nil;
     }
     
-    // Convert the NSData object to a string
     NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-    return jsonString;
+    return [jsonString autorelease];
 }
 
 @end
@@ -256,7 +246,6 @@ typedef void (*InitFunc)(
 typedef void (*SetElementFunc)(const char* elementJson);
 typedef void (*SetChildrenFunc)(int id, const char* childrenIds);
 
-// Callback functions
 void onInitCallback() {
     NSLog(@"Library initialized successfully (Objective-C)!");
 }
@@ -299,18 +288,13 @@ int main(int argc, const char * argv[]) {
         NSString *themeJson = [theme toJSON];
         NSLog(@"Theme: %@", themeJson);
 
-
-        // Load the shared library (ensure correct path)
-        const char *libraryPath = "./libxframesshared.so";  // Adjust path as needed
+        const char *libraryPath = "./libxframesshared.so";
         void *handle = dlopen(libraryPath, RTLD_LAZY);
         
         if (!handle) {
             NSLog(@"Failed to load library: %s", dlerror());
             return 1;
         }
-
-        // Retrieve the init function pointer
-        
 
         InitFunc initFunc = (InitFunc)dlsym(handle, "init");
         if (!initFunc) {
@@ -319,7 +303,6 @@ int main(int argc, const char * argv[]) {
             return 1;
         }
 
-        // Retrieve the setElement function pointer
         SetElementFunc setElementFunc = (SetElementFunc)dlsym(handle, "setElement");
         if (!setElementFunc) {
             NSLog(@"Failed to find symbol 'setElement': %s", dlerror());
@@ -327,7 +310,6 @@ int main(int argc, const char * argv[]) {
             return 1;
         }
 
-        // Retrieve the setChildren function pointer
         SetChildrenFunc setChildrenFunc = (SetChildrenFunc)dlsym(handle, "setChildren");
         if (!setChildrenFunc) {
             NSLog(@"Failed to find symbol 'setChildren': %s", dlerror());
@@ -335,11 +317,10 @@ int main(int argc, const char * argv[]) {
             return 1;
         }
 
-        // Call the init function with callback functions
         initFunc(
             "./assets", 
-            "./fonts.txt", 
-            "./styles.css",
+            [fontDefsJson UTF8String],
+            [themeJson UTF8String],
             onInitCallback,        
             onTextChangedCallback, 
             onComboChanged,                  
@@ -349,7 +330,9 @@ int main(int argc, const char * argv[]) {
             onClickCallback
         );
 
-        // Close the library
+        NSLog(@"Press Enter to continue...\n");
+        getchar();
+
         dlclose(handle);
     }
     return 0;
