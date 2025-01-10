@@ -1,6 +1,16 @@
 #import <Foundation/Foundation.h>
 #include <dlfcn.h>
 
+typedef void (*InitFunc)(
+    const char*, const char*, const char*,
+    void (*)(), void (*)(int, const char*), void (*)(int, int),
+    void (*)(int, float), void (*)(int, bool),
+    void (*)(int, float*, int), void (*)(int)
+);
+
+typedef void (*SetElementFunc)(const char* elementJson);
+typedef void (*SetChildrenFunc)(int id, const char* childrenIds);
+
 typedef NS_ENUM(NSInteger, ImGuiCol) {
     ImGuiColText = 0,
     ImGuiColTextDisabled = 1,
@@ -57,6 +67,85 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
     ImGuiColModalWindowDimBg = 52,
     ImGuiColCOUNT = 53
 };
+
+@interface XFrames : NSObject {
+    void* _handle;
+    InitFunc _initFunc;
+    SetElementFunc _setElementFunc;
+    SetChildrenFunc _setChildrenFunc;
+}
+
+@property (nonatomic) void* handle;
+@property (nonatomic) InitFunc initFunc;
+@property (nonatomic) SetElementFunc setElementFunc;
+@property (nonatomic) SetChildrenFunc setChildrenFunc;
+
+- (instancetype)init;
+- (void)cleanUp;
+
+@end
+
+@implementation XFrames
+
+// static XFrames *sharedInstance = nil;
+
+@synthesize handle = _handle;
+@synthesize initFunc = _initFunc;
+@synthesize setElementFunc = _setElementFunc;
+@synthesize setChildrenFunc = _setChildrenFunc;
+
++ (instancetype)sharedInstance {
+    static XFrames *sharedInstance = nil;
+
+    if (sharedInstance == nil) {
+        sharedInstance = [[self alloc] init];
+    }
+
+    return sharedInstance;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        const char *libraryPath = "./libxframesshared.so";
+        self.handle = dlopen(libraryPath, RTLD_LAZY);
+
+        if (!self.handle) {
+            NSLog(@"Failed to load library: %s", dlerror());
+            // return 1;
+        }
+
+        self.initFunc = (InitFunc)dlsym(self.handle, "init");
+        if (!self.initFunc) {
+            NSLog(@"Failed to find symbol 'init': %s", dlerror());
+            dlclose(self.handle);
+            // return 1;
+        }
+
+        self.setElementFunc = (SetElementFunc)dlsym(self.handle, "setElement");
+        if (!self.setElementFunc) {
+            NSLog(@"Failed to find symbol 'setElement': %s", dlerror());
+            dlclose(self.handle);
+            // return 1;
+        }
+
+        self.setChildrenFunc = (SetChildrenFunc)dlsym(self.handle, "setChildren");
+        if (!self.setChildrenFunc) {
+            NSLog(@"Failed to find symbol 'setChildren': %s", dlerror());
+            dlclose(self.handle);
+            // return 1;
+        }
+    }
+
+    return self;
+}
+
+- (void)cleanUp {
+    dlclose(self.handle);
+}
+
+@end
+
 
 
 @interface Theme : NSObject {
@@ -236,18 +325,46 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
 
 @end
 
-typedef void (*InitFunc)(
-    const char*, const char*, const char*,
-    void (*)(), void (*)(int, const char*), void (*)(int, int),
-    void (*)(int, float), void (*)(int, bool),
-    void (*)(int, float*, int), void (*)(int)
-);
 
-typedef void (*SetElementFunc)(const char* elementJson);
-typedef void (*SetChildrenFunc)(int id, const char* childrenIds);
 
 void onInitCallback() {
     NSLog(@"Library initialized successfully (Objective-C)!");
+
+    XFrames *xframes = [XFrames sharedInstance];
+
+    NSMutableDictionary *rootNodeDict = [NSMutableDictionary dictionary];
+    [rootNodeDict setObject:@"node" forKey:@"type"];
+    [rootNodeDict setObject:@(YES) forKey:@"root"];
+    [rootNodeDict setObject:@(0) forKey:@"id"];
+
+    NSMutableDictionary *unformattedTextDict = [NSMutableDictionary dictionary];
+    [unformattedTextDict setObject:@"unformatted-text" forKey:@"type"];
+    [unformattedTextDict setObject:@"Hello, world" forKey:@"text"];
+    [unformattedTextDict setObject:@(1) forKey:@"id"];
+
+    NSError *error = nil;
+
+    NSData *rootNodeJsonData = [NSJSONSerialization dataWithJSONObject:rootNodeDict options:0 error:&error];
+    
+    if (error) {
+        NSLog(@"Error converting to JSON: %@", [error localizedDescription]);
+        return;
+    }
+
+    NSData *unformattedTextJsonData = [NSJSONSerialization dataWithJSONObject:unformattedTextDict options:0 error:&error];
+    
+    if (error) {
+        NSLog(@"Error converting to JSON: %@", [error localizedDescription]);
+        return;
+    }
+
+    NSString *rootNodeJson = [[NSString alloc] initWithData:rootNodeJsonData encoding:NSUTF8StringEncoding];
+    NSString *unformattedTextJson = [[NSString alloc] initWithData:unformattedTextJsonData encoding:NSUTF8StringEncoding];
+
+    xframes.setElementFunc([rootNodeJson UTF8String]);
+    xframes.setElementFunc([unformattedTextJson UTF8String]);
+
+    xframes.setChildrenFunc(0, "[1]");
 }
 
 void onTextChangedCallback(int fieldId, const char *newText) {
@@ -288,36 +405,9 @@ int main(int argc, const char * argv[]) {
         NSString *themeJson = [theme toJSON];
         NSLog(@"Theme: %@", themeJson);
 
-        const char *libraryPath = "./libxframesshared.so";
-        void *handle = dlopen(libraryPath, RTLD_LAZY);
-        
-        if (!handle) {
-            NSLog(@"Failed to load library: %s", dlerror());
-            return 1;
-        }
+        XFrames *xframes = [XFrames sharedInstance];
 
-        InitFunc initFunc = (InitFunc)dlsym(handle, "init");
-        if (!initFunc) {
-            NSLog(@"Failed to find symbol 'init': %s", dlerror());
-            dlclose(handle);
-            return 1;
-        }
-
-        SetElementFunc setElementFunc = (SetElementFunc)dlsym(handle, "setElement");
-        if (!setElementFunc) {
-            NSLog(@"Failed to find symbol 'setElement': %s", dlerror());
-            dlclose(handle);
-            return 1;
-        }
-
-        SetChildrenFunc setChildrenFunc = (SetChildrenFunc)dlsym(handle, "setChildren");
-        if (!setChildrenFunc) {
-            NSLog(@"Failed to find symbol 'setChildren': %s", dlerror());
-            dlclose(handle);
-            return 1;
-        }
-
-        initFunc(
+        xframes.initFunc(
             "./assets", 
             [fontDefsJson UTF8String],
             [themeJson UTF8String],
@@ -333,7 +423,7 @@ int main(int argc, const char * argv[]) {
         NSLog(@"Press Enter to continue...\n");
         getchar();
 
-        dlclose(handle);
+        [xframes cleanUp];
     }
     return 0;
 }
