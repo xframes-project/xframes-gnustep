@@ -364,7 +364,18 @@ void onInitCallback() {
     xframes.setElementFunc([rootNodeJson UTF8String]);
     xframes.setElementFunc([unformattedTextJson UTF8String]);
 
-    xframes.setChildrenFunc(0, "[1]");
+    NSArray *childrenIds = @[@1];
+    NSData *childrenIdsJsonData = [NSJSONSerialization dataWithJSONObject:childrenIds options:0 error:&error];
+
+    if (error) {
+        NSLog(@"Error converting to JSON: %@", [error localizedDescription]);
+        return;
+    }
+    
+    NSString *childrenIdsJson = [[NSString alloc] initWithData:childrenIdsJsonData encoding:NSUTF8StringEncoding];
+    NSLog(@"JSON Output: %@", childrenIdsJson);
+
+    xframes.setChildrenFunc(0, [childrenIdsJson UTF8String]);
 }
 
 void onTextChangedCallback(int fieldId, const char *newText) {
