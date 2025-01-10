@@ -5,6 +5,10 @@
     NSArray *_defs;
 }
 @property (nonatomic, retain) NSArray *defs;
+
+- (instancetype)init;
+- (NSString *)toJSON;
+
 @end
 
 @implementation FontDefs
@@ -15,26 +19,45 @@
 {
     self = [super init];
     if (self) {
-        _defs = [NSArray arrayWithObjects:
-            [NSDictionary dictionaryWithObjectsAndKeys:
-                @"roboto-regular", @"name",
-                [NSArray arrayWithObjects:
-                    [NSNumber numberWithInt:16],
-                    [NSNumber numberWithInt:18],
-                    [NSNumber numberWithInt:20],
-                    [NSNumber numberWithInt:24],
-                    [NSNumber numberWithInt:28],
-                    [NSNumber numberWithInt:32],
-                    [NSNumber numberWithInt:36],
-                    [NSNumber numberWithInt:48],
-                    nil
-                ], @"sizes",
-                nil
-            ],
-            nil
-        ];
+        NSMutableArray *fontDefsArray = [NSMutableArray array];
+        
+        // Define font and sizes
+        NSString *fontName = @"roboto-regular";
+        NSArray *sizes = @[@16, @18, @20, @24, @28, @32, @36, @48];
+        
+        // Create a dictionary for each font-size combination
+        for (NSNumber *size in sizes) {
+            NSDictionary *fontDef = @{
+                @"name": fontName,
+                @"size": size
+            };
+            [fontDefsArray addObject:fontDef];
+        }
+        
+        // Assign to the defs property
+        self.defs = fontDefsArray;
     }
     return self;
+}
+
+- (NSString *)toJSON {
+    // Create a dictionary to hold the entire structure
+    NSDictionary *jsonDict = @{
+        @"defs": self.defs
+    };
+    
+    // Serialize the dictionary to JSON
+    NSError *error = nil;
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:jsonDict options:NSJSONWritingPrettyPrinted error:&error];
+    
+    if (error) {
+        NSLog(@"Error converting to JSON: %@", error.localizedDescription);
+        return nil;
+    }
+    
+    // Convert the NSData object to a string
+    NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    return jsonString;
 }
 
 @end
@@ -85,21 +108,8 @@ void onClickCallback(int buttonId) {
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         FontDefs *fontDefs = [[FontDefs alloc] init];
-        NSLog(@"Font Definitions: %@", fontDefs.defs);
-        
-        // Flatten the font definitions
-        NSMutableArray *flattenedFontDefs = [NSMutableArray array];
-        for (NSDictionary *def in fontDefs.defs) {
-            NSString *name = [def objectForKey:@"name"];
-            NSArray *sizes = [def objectForKey:@"sizes"];
-            
-            for (NSNumber *size in sizes) {
-                NSDictionary *flattened = @{@"name": name, @"size": size};
-                [flattenedFontDefs addObject:flattened];
-            }
-        }
-        
-        NSLog(@"Flattened Font Definitions: %@", flattenedFontDefs);
+        NSString *jsonString = [fontDefs toJSON];
+        NSLog(@"JSON Output: %@", jsonString);
 
 
         // Load the shared library (ensure correct path)
