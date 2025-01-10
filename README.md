@@ -25,3 +25,8 @@ For example
 ``clang `gnustep-config --objc-flags` -o main main.m `gnustep-config --base-libs` -lm``
 
 ## Screenshots
+
+Ubuntu 24.04
+
+![image](https://github.com/user-attachments/assets/026e6cee-c704-4226-9bf7-1084e97b13d4)
+
