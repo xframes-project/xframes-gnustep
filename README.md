@@ -6,9 +6,11 @@
 
 #### Ubuntu
 
-`sudo apt install gnustep gnustep-devel clang plocate libxml2-dev libxslt1-dev`
+`sudo apt install gnustep gnustep-devel clang plocate libxml2-dev libxslt1-dev`'
 
-`locate objc.h`
+You may need to run `sudo updatedb.plocate`, depending on your environment.
+
+Then run `locate objc.h`.
 
 Copy the path, change the command accordingly and run (replace `<path>` with the actual path):
 
