@@ -32,3 +32,7 @@ Ubuntu 24.04
 
 ![image](https://github.com/user-attachments/assets/026e6cee-c704-4226-9bf7-1084e97b13d4)
 
+Raspberry Pi 5
+
+![image](https://github.com/user-attachments/assets/6c423fa7-e801-43da-bb20-36786e0b51cb)
+
