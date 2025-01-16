@@ -87,8 +87,6 @@ typedef NS_ENUM(NSInteger, ImGuiCol) {
 
 @implementation XFrames
 
-// static XFrames *sharedInstance = nil;
-
 @synthesize handle = _handle;
 @synthesize initFunc = _initFunc;
 @synthesize setElementFunc = _setElementFunc;
